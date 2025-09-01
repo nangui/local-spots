@@ -1,0 +1,418 @@
+# 📋 User Stories - LocalSpots
+
+## 🎯 Vision Produit
+
+Local Spots est une application de découverte et partage de lieux locaux intéressants, permettant aux utilisateurs de trouver des spots uniques dans leur environnement et de partager leurs découvertes avec la communauté.
+
+## 📊 Priorisation MVP
+
+### ✅ MUST HAVE (Sprint 1-2)
+1. **Authentication & Profils**
+2. **Carte & Géolocalisation**
+3. **CRUD Spots**
+4. **Recherche & Filtres**
+
+### 🔄 SHOULD HAVE (Sprint 3-4)
+5. **Système d'Avis**
+6. **Upload Photos**
+
+### 💡 COULD HAVE (Post-MVP)
+7. **Recommandations**
+8. **Social Features**
+9. **Collections**
+
+## 📝 User Stories Détaillées
+
+### Epic 1: Foundation & Auth 🔐
+
+#### US-1.1: Inscription Utilisateur
+**En tant qu'** utilisateur  
+**Je veux** créer un compte rapidement  
+**Afin de** accéder à toutes les fonctionnalités de l'application  
+
+**Critères d'acceptation:**
+- [ ] Formulaire d'inscription avec email, username et mot de passe
+- [ ] Validation des données côté client et serveur
+- [ ] Envoi d'email de confirmation
+- [ ] Message de bienvenue après inscription
+- [ ] Redirection vers l'onboarding
+
+**Estimation:** 3 points
+
+---
+
+#### US-1.2: Connexion Utilisateur
+**En tant qu'** utilisateur enregistré  
+**Je veux** me connecter facilement  
+**Afin de** accéder à mon compte et mes données  
+
+**Critères d'acceptation:**
+- [ ] Formulaire de connexion email/mot de passe
+- [ ] Option "Se souvenir de moi"
+- [ ] Gestion des erreurs de connexion
+- [ ] Récupération de mot de passe
+- [ ] Protection contre le brute force
+
+**Estimation:** 2 points
+
+---
+
+#### US-1.3: Profil Utilisateur
+**En tant qu'** utilisateur connecté  
+**Je veux** personnaliser mon profil  
+**Afin de** avoir une expérience personnalisée  
+
+**Critères d'acceptation:**
+- [ ] Page de profil avec informations personnelles
+- [ ] Upload d'avatar
+- [ ] Modification des informations
+- [ ] Gestion des préférences (catégories favorites, rayon de recherche)
+- [ ] Suppression de compte
+
+**Estimation:** 3 points
+
+---
+
+### Epic 2: Core Mapping 🗺️
+
+#### US-2.1: Carte Interactive
+**En tant qu'** utilisateur  
+**Je veux** voir les spots sur une carte  
+**Afin de** découvrir visuellement mon environnement  
+
+**Critères d'acceptation:**
+- [ ] Intégration Google Maps/Mapbox
+- [ ] Affichage des spots avec marqueurs personnalisés
+- [ ] Clustering des marqueurs en cas de zoom out
+- [ ] Popup d'information au clic sur un marqueur
+- [ ] Bouton de centrage sur ma position
+
+**Estimation:** 5 points
+
+---
+
+#### US-2.2: Géolocalisation
+**En tant qu'** utilisateur  
+**Je veux** voir ma position actuelle  
+**Afin de** trouver des spots proches de moi  
+
+**Critères d'acceptation:**
+- [ ] Demande de permission de géolocalisation
+- [ ] Affichage de ma position sur la carte
+- [ ] Calcul de distance jusqu'aux spots
+- [ ] Tri par distance
+- [ ] Gestion du refus de géolocalisation
+
+**Estimation:** 3 points
+
+---
+
+#### US-2.3: Navigation GPS
+**En tant qu'** utilisateur  
+**Je veux** obtenir un itinéraire vers un spot  
+**Afin de** m'y rendre facilement  
+
+**Critères d'acceptation:**
+- [ ] Bouton "S'y rendre" sur chaque spot
+- [ ] Ouverture dans l'app de navigation par défaut
+- [ ] Affichage du temps de trajet estimé
+- [ ] Options de transport (voiture, vélo, marche)
+
+**Estimation:** 2 points
+
+---
+
+### Epic 3: Spots Management 📍
+
+#### US-3.1: Création de Spot
+**En tant qu'** utilisateur connecté  
+**Je veux** ajouter un nouveau spot  
+**Afin de** partager mes découvertes avec la communauté  
+
+**Critères d'acceptation:**
+- [ ] Formulaire de création avec nom, description, catégorie
+- [ ] Sélection de position sur la carte ou adresse
+- [ ] Upload de photos (min 1, max 5)
+- [ ] Ajout d'informations pratiques (horaires, prix, contact)
+- [ ] Prévisualisation avant publication
+- [ ] Statut "En attente de modération"
+
+**Estimation:** 5 points
+
+---
+
+#### US-3.2: Consultation de Spot
+**En tant qu'** utilisateur  
+**Je veux** voir les détails d'un spot  
+**Afin de** décider si je veux m'y rendre  
+
+**Critères d'acceptation:**
+- [ ] Page détaillée avec toutes les informations
+- [ ] Galerie photos avec zoom
+- [ ] Carte avec localisation précise
+- [ ] Informations pratiques
+- [ ] Boutons d'action (favori, partage, s'y rendre)
+- [ ] Section avis et notes
+
+**Estimation:** 3 points
+
+---
+
+#### US-3.3: Modification de Spot
+**En tant que** créateur d'un spot  
+**Je veux** modifier les informations  
+**Afin de** les maintenir à jour  
+
+**Critères d'acceptation:**
+- [ ] Accès à l'édition pour le créateur uniquement
+- [ ] Modification de tous les champs
+- [ ] Ajout/suppression de photos
+- [ ] Historique des modifications
+- [ ] Validation des changements
+
+**Estimation:** 3 points
+
+---
+
+#### US-3.4: Recherche de Spots
+**En tant qu'** utilisateur  
+**Je veux** rechercher des spots spécifiques  
+**Afin de** trouver rapidement ce que je cherche  
+
+**Critères d'acceptation:**
+- [ ] Barre de recherche avec autocomplétion
+- [ ] Recherche par nom, description, catégorie
+- [ ] Résultats en temps réel
+- [ ] Tri par pertinence/distance/note
+- [ ] Sauvegarde des recherches récentes
+
+**Estimation:** 3 points
+
+---
+
+#### US-3.5: Filtrage de Spots
+**En tant qu'** utilisateur  
+**Je veux** filtrer les spots affichés  
+**Afin de** voir uniquement ceux qui m'intéressent  
+
+**Critères d'acceptation:**
+- [ ] Filtres par catégorie (multi-sélection)
+- [ ] Filtre par distance (slider)
+- [ ] Filtre par note minimale
+- [ ] Filtre par prix (gratuit/payant)
+- [ ] Combinaison de filtres
+- [ ] Sauvegarde des préférences de filtrage
+
+**Estimation:** 3 points
+
+---
+
+### Epic 4: Reviews System ⭐
+
+#### US-4.1: Ajout d'Avis
+**En tant qu'** utilisateur ayant visité un spot  
+**Je veux** laisser un avis  
+**Afin d'** aider les autres utilisateurs  
+
+**Critères d'acceptation:**
+- [ ] Note de 1 à 5 étoiles obligatoire
+- [ ] Commentaire texte optionnel (min 20 caractères)
+- [ ] Upload de photos optionnel (max 3)
+- [ ] Date de visite
+- [ ] Un seul avis par utilisateur par spot
+- [ ] Modification possible de son avis
+
+**Estimation:** 3 points
+
+---
+
+#### US-4.2: Consultation des Avis
+**En tant qu'** utilisateur  
+**Je veux** lire les avis d'un spot  
+**Afin de** me faire une opinion avant de m'y rendre  
+
+**Critères d'acceptation:**
+- [ ] Liste des avis triée par date (plus récent d'abord)
+- [ ] Affichage note, commentaire, photos, auteur
+- [ ] Note moyenne visible
+- [ ] Distribution des notes (graphique)
+- [ ] Filtre par note
+- [ ] Pagination ou infinite scroll
+
+**Estimation:** 2 points
+
+---
+
+#### US-4.3: Modération des Avis
+**En tant qu'** administrateur  
+**Je veux** modérer les avis  
+**Afin de** maintenir la qualité du contenu  
+
+**Critères d'acceptation:**
+- [ ] Interface de modération
+- [ ] Signalement d'avis par les utilisateurs
+- [ ] Suppression d'avis inappropriés
+- [ ] Notification à l'auteur
+- [ ] Log des actions de modération
+
+**Estimation:** 3 points
+
+---
+
+### Epic 5: Photo Management 📸
+
+#### US-5.1: Upload de Photos
+**En tant qu'** utilisateur  
+**Je veux** ajouter des photos à un spot  
+**Afin de** montrer à quoi il ressemble  
+
+**Critères d'acceptation:**
+- [ ] Upload multiple (max 5 photos par spot)
+- [ ] Compression automatique des images
+- [ ] Formats acceptés : JPG, PNG, WebP
+- [ ] Taille max : 10MB par photo
+- [ ] Preview avant upload
+- [ ] Progression d'upload visible
+
+**Estimation:** 3 points
+
+---
+
+#### US-5.2: Galerie Photos
+**En tant qu'** utilisateur  
+**Je veux** voir toutes les photos d'un spot  
+**Afin de** me faire une idée visuelle du lieu  
+
+**Critères d'acceptation:**
+- [ ] Galerie avec thumbnails
+- [ ] Lightbox pour vue plein écran
+- [ ] Navigation entre photos (swipe/flèches)
+- [ ] Informations sur la photo (auteur, date)
+- [ ] Téléchargement de photo
+- [ ] Signalement de photo inappropriée
+
+**Estimation:** 2 points
+
+---
+
+## 📈 Métriques de Succès
+
+### KPIs Techniques
+- Temps de chargement < 3s
+- Taux de crash < 1%
+- Disponibilité > 99.5%
+- Temps de réponse API < 200ms
+
+### KPIs Produit
+- Taux de conversion inscription : > 30%
+- Nombre de spots créés par jour : > 10
+- Taux d'engagement (avis/utilisateur) : > 20%
+- Rétention J7 : > 40%
+- Rétention J30 : > 20%
+
+### KPIs Utilisateur
+- NPS (Net Promoter Score) : > 40
+- Note app store : > 4.2/5
+- Temps moyen de session : > 5 min
+- Nombre de sessions/semaine : > 3
+
+---
+
+## 🚀 Planning de Release
+
+### MVP (v1.0) - Sprint 1-2 (4 semaines)
+- ✅ Authentication basique
+- ✅ Carte avec spots
+- ✅ CRUD spots simple
+- ✅ Recherche basique
+
+### v1.1 - Sprint 3-4 (4 semaines)
+- ⏳ Système d'avis complet
+- ⏳ Upload photos
+- ⏳ Filtres avancés
+- ⏳ Amélioration UX
+
+### v1.2 - Sprint 5-6 (4 semaines)
+- 📅 Recommandations personnalisées
+- 📅 Features sociales (follow, like)
+- 📅 Collections de spots
+- 📅 Mode hors-ligne
+
+### v2.0 - Future
+- 💡 Application mobile native
+- 💡 Intégration réseaux sociaux
+- 💡 Système de gamification
+- 💡 API publique
+- 💡 Monétisation (spots premium)
+
+---
+
+## 📝 Notes et Décisions
+
+### Décisions Techniques
+- **Backend:** AdonisJS 6 + PostgreSQL
+- **Frontend:** Vue.js 3 ou React (à décider)
+- **Maps:** Google Maps API (avec fallback Mapbox)
+- **Storage:** Local + S3 pour les photos
+- **Cache:** Redis pour les performances
+
+### Décisions Produit
+- Pas de connexion obligatoire pour consulter
+- Connexion requise pour contribuer
+- Modération a posteriori avec signalements
+- Pas de publicité dans le MVP
+- Focus sur le mobile-first
+
+### Risques Identifiés
+- **Coûts API Maps** : Prévoir budget et quotas
+- **Modération contenu** : Prévoir ressources humaines
+- **RGPD** : Conformité pour données géolocalisées
+- **Scalabilité** : Architecture prête pour la croissance
+
+---
+
+## 🎯 Definition of Done
+
+Une user story est considérée comme terminée quand :
+- [ ] Code développé et reviewé
+- [ ] Tests unitaires écrits (coverage > 80%)
+- [ ] Tests d'intégration passés
+- [ ] Documentation API mise à jour
+- [ ] Code déployé en staging
+- [ ] Tests d'acceptation validés par le PO
+- [ ] Aucun bug critique
+- [ ] Performance acceptable
+- [ ] Accessible (WCAG 2.1 AA)
+
+## 🔄 Processus de Développement
+
+### Workflow Agile
+1. **Planning** : Estimation et priorisation des stories
+2. **Development** : Développement en sprints de 2 semaines
+3. **Testing** : Tests automatisés et manuels
+4. **Review** : Code review et validation produit
+5. **Deployment** : Déploiement en staging puis production
+
+### Cérémonies
+- **Daily Standup** : 15 min chaque matin
+- **Sprint Planning** : 2h au début de chaque sprint
+- **Sprint Review** : 1h à la fin de chaque sprint
+- **Retrospective** : 1h après chaque sprint review
+
+## 📊 Suivi et Reporting
+
+### Outils de Suivi
+- **Jira** : Gestion des user stories et sprints
+- **Confluence** : Documentation produit
+- **GitHub** : Code source et CI/CD
+- **Figma** : Maquettes et prototypes
+
+### Métriques de Suivi
+- **Velocity** : Points par sprint
+- **Burndown** : Progression du sprint
+- **Lead Time** : Temps de développement
+- **Cycle Time** : Temps de validation
+description:
+globs:
+alwaysApply: true
+---

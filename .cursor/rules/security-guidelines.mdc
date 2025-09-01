@@ -1,0 +1,506 @@
+---
+title: Règles de Sécurité - LocalSpots
+---
+
+# 🔒 Règles de Sécurité - LocalSpots
+
+## 🛡️ Protection OWASP Top 10
+
+### 1. Injection SQL
+- **Utiliser TOUJOURS** Lucid ORM ou Query Builder
+- **Jamais** de requêtes SQL brutes avec concaténation
+- **Paramètres liés** pour les requêtes personnalisées
+
+```typescript
+// ✅ Bon - ORM sécurisé
+const spots = await Spot.query()
+  .where('category', category)
+  .where('status', 'published')
+
+// ✅ Bon - Paramètres liés
+const results = await Database.rawQuery(
+  'SELECT * FROM spots WHERE category = ? AND status = ?',
+  [category, 'published']
+)
+
+// ❌ Mauvais - Injection SQL possible
+const results = await Database.rawQuery(
+  `SELECT * FROM spots WHERE category = '${category}'`
+)
+```
+
+### 2. XSS (Cross-Site Scripting)
+- **Échappement automatique** dans les templates Edge
+- **Validation stricte** des entrées utilisateur
+- **Content Security Policy** configuré
+
+```typescript
+// ✅ Bon - Échappement automatique
+{{ user.name }}  // Échappé automatiquement
+
+// ✅ Bon - HTML sûr uniquement
+{{{ trustedHtml }}}  // Non échappé - utiliser avec précaution
+
+// ❌ Mauvais - Risque XSS
+<div>${userInput}</div>  // Échappement manuel requis
+```
+
+### 3. CSRF (Cross-Site Request Forgery)
+- **Protection CSRF** activée par défaut
+- **Tokens CSRF** pour tous les formulaires
+- **Routes exemptées** uniquement si nécessaire
+
+```typescript
+// config/shield.ts
+export default shieldConfig({
+  csrf: {
+    enabled: true,
+    exceptRoutes: ['/webhook/*'],  // Routes exemptées
+    enableXsrfCookie: true,
+  },
+})
+```
+
+### 4. Authentification Cassée
+- **Hashage bcrypt** pour les mots de passe
+- **Sessions sécurisées** avec expiration
+- **Tokens JWT** avec rotation
+
+```typescript
+// config/auth.ts
+export default authConfig({
+  default: 'web',
+  guards: {
+    web: sessionGuard({
+      useRememberMeTokens: true,
+      rememberMeTokensAge: '30 days',
+      provider: sessionUserProvider({
+        model: () => import('#models/user'),
+      }),
+    }),
+  },
+})
+```
+
+### 5. Exposition de Données Sensibles
+- **Sérialisation contrôlée** des modèles
+- **Masquage des champs sensibles**
+- **Logs sans données personnelles**
+
+```typescript
+// app/models/user.ts
+export default class User extends BaseModel {
+  @column({ serializeAs: null })
+  declare password: string
+
+  @column({ serializeAs: null })
+  declare rememberMeToken: string | null
+
+  // Sérialisation contrôlée
+  serializeExtras = {
+    public: {
+      fields: {
+        pick: ['id', 'username', 'email', 'created_at']
+      }
+    }
+  }
+}
+```
+
+## 🔐 Authentification et Autorisation
+
+### Stratégie d'Authentification
+```typescript
+// config/auth.ts
+export default authConfig({
+  default: 'web',
+  guards: {
+    web: sessionGuard({
+      useRememberMeTokens: true,
+      rememberMeTokensAge: '30 days',
+      provider: sessionUserProvider({
+        model: () => import('#models/user'),
+      }),
+    }),
+    api: tokenGuard({
+      provider: tokenUserProvider({
+        model: () => import('#models/user'),
+      }),
+    }),
+  },
+})
+```
+
+### Politique de Mots de Passe
+```typescript
+// app/validators/auth_validator.ts
+export const passwordRules = vine
+  .string()
+  .minLength(8)
+  .maxLength(128)
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+  .withMessage('Password must contain uppercase, lowercase, number and special character')
+```
+
+### Protection contre le Brute Force
+```typescript
+// app/middleware/throttle_middleware.ts
+export default class ThrottleMiddleware {
+  async handle({ request, response }: HttpContext, next: NextFn) {
+    const key = `login_${request.ip()}`
+    const limiter = Limiter.use('login')
+
+    if (await limiter.isBlocked(key)) {
+      return response.tooManyRequests({
+        error: 'Too many login attempts. Please try again later.',
+        retryAfter: await limiter.availableIn(key),
+      })
+    }
+
+    await limiter.attempt(key)
+    return next()
+  }
+}
+```
+
+## 🔑 Gestion des Secrets
+
+### Variables d'Environnement
+```bash
+# .env
+APP_KEY=use-a-random-32-character-string
+DB_PASSWORD=use-a-strong-password
+JWT_SECRET=another-random-string
+SMTP_PASSWORD=smtp-password
+GOOGLE_MAPS_API_KEY=your-api-key
+```
+
+### Génération de Clés Sécurisées
+```bash
+# Générer APP_KEY
+node ace generate:key
+
+# Générer JWT secret
+openssl rand -hex 32
+
+# Générer mot de passe fort
+openssl rand -base64 32
+```
+
+### Rotation des Secrets
+```typescript
+// app/tasks/rotate_app_key.ts
+export default class RotateAppKey {
+  public static commandName = 'app:rotate-key'
+
+  async run() {
+    const oldKey = Env.get('APP_KEY')
+    const newKey = generateRandomKey()
+    
+    // Réencrypter les données avec la nouvelle clé
+    await this.reencryptData(oldKey, newKey)
+    
+    console.log(`New APP_KEY: ${newKey}`)
+    console.log('Update your .env file with this new key')
+  }
+}
+```
+
+## 🛡️ Headers de Sécurité
+
+### Configuration des Headers
+```typescript
+// config/shield.ts
+export default shieldConfig({
+  xFrame: {
+    enabled: true,
+    action: 'DENY',
+  },
+  
+  hsts: {
+    enabled: true,
+    maxAge: '180 days',
+    includeSubDomains: true,
+    preload: true,
+  },
+  
+  contentTypeSniffing: {
+    enabled: true,
+  },
+  
+  xss: {
+    enabled: true,
+    mode: 'block',
+  },
+  
+  csp: {
+    enabled: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'"],
+      mediaSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+})
+```
+
+## ✅ Validation et Sanitisation
+
+### Validation Stricte des Entrées
+```typescript
+// app/validators/spot_validator.ts
+export const createSpotValidator = vine.compile(
+  vine.object({
+    name: vine
+      .string()
+      .trim()
+      .escape()  // Échapper les caractères HTML
+      .minLength(3)
+      .maxLength(255),
+    
+    description: vine
+      .string()
+      .trim()
+      .escape()
+      .maxLength(1000)
+      .optional(),
+    
+    latitude: vine
+      .number()
+      .min(-90)
+      .max(90),
+    
+    longitude: vine
+      .number()
+      .min(-180)
+      .max(180),
+    
+    website: vine
+      .string()
+      .url()
+      .optional(),
+    
+    email: vine
+      .string()
+      .email()
+      .normalizeEmail()  // Normaliser l'email
+      .optional(),
+  })
+)
+```
+
+### Sanitisation des Requêtes
+```typescript
+// Middleware de sanitisation
+export default class SanitizationMiddleware {
+  async handle({ request }: HttpContext, next: NextFn) {
+    // Nettoyer les paramètres de requête
+    const query = request.qs()
+    const sanitizedQuery = this.sanitizeObject(query)
+    
+    // Remplacer les paramètres originaux
+    request.updateQs(sanitizedQuery)
+    
+    return next()
+  }
+
+  private sanitizeObject(obj: any): any {
+    if (typeof obj !== 'object' || obj === null) {
+      return this.sanitizeValue(obj)
+    }
+
+    const sanitized: any = {}
+    for (const [key, value] of Object.entries(obj)) {
+      sanitized[key] = this.sanitizeValue(value)
+    }
+
+    return sanitized
+  }
+
+  private sanitizeValue(value: any): any {
+    if (typeof value === 'string') {
+      return value.trim().replace(/[<>]/g, '')
+    }
+    return value
+  }
+}
+```
+
+## 🚨 Gestion des Incidents de Sécurité
+
+### Logging de Sécurité
+```typescript
+// app/services/security_logger.ts
+export default class SecurityLogger {
+  static logFailedLogin(email: string, ip: string) {
+    logger.warn('Failed login attempt', {
+      email,
+      ip,
+      timestamp: new Date().toISOString(),
+      type: 'FAILED_LOGIN',
+    })
+  }
+
+  static logSuspiciousActivity(userId: number, activity: string) {
+    logger.error('Suspicious activity detected', {
+      userId,
+      activity,
+      timestamp: new Date().toISOString(),
+      type: 'SUSPICIOUS_ACTIVITY',
+    })
+  }
+
+  static logDataAccess(userId: number, resource: string, action: string) {
+    logger.info('Data access', {
+      userId,
+      resource,
+      action,
+      timestamp: new Date().toISOString(),
+      type: 'DATA_ACCESS',
+    })
+  }
+}
+```
+
+### Plan de Réponse aux Incidents
+```typescript
+// app/commands/security_lockdown.ts
+export default class SecurityLockdown extends BaseCommand {
+  static commandName = 'security:lockdown'
+
+  async run() {
+    // 1. Désactiver les inscriptions
+    await Setting.set('registrations_enabled', false)
+    
+    // 2. Forcer la déconnexion de tous les utilisateurs
+    await Session.query().delete()
+    
+    // 3. Révoquer tous les tokens
+    await Token.query().delete()
+    
+    // 4. Activer le mode maintenance
+    await Setting.set('maintenance_mode', true)
+    
+    console.log('🔒 Security lockdown activated')
+  }
+}
+```
+
+## 📊 Audit de Sécurité
+
+### Audit des Dépendances
+```bash
+# Vérifier les vulnérabilités
+npm audit
+
+# Corriger automatiquement
+npm audit fix
+
+# Vérifier les dépendances obsolètes
+npm outdated
+
+# Mettre à jour les dépendances
+npm update
+```
+
+### Tests de Sécurité
+```typescript
+// tests/security/auth.spec.ts
+test('prevents SQL injection in login', async ({ client }) => {
+  const response = await client.post('/login').json({
+    email: "admin' OR '1'='1",
+    password: "' OR '1'='1",
+  })
+
+  response.assertStatus(401)
+})
+
+test('prevents XSS in user input', async ({ client, assert }) => {
+  const xssPayload = '<script>alert("XSS")</script>'
+  
+  const response = await client.post('/spots').json({
+    name: xssPayload,
+    description: xssPayload,
+  })
+
+  const spot = await Spot.first()
+  assert.notInclude(spot!.name, '<script>')
+  assert.notInclude(spot!.description, '<script>')
+})
+```
+
+## 🔮 Sécurité Avancée
+
+### Chiffrement des Données
+```typescript
+// app/services/encryption_service.ts
+import Encryption from '@adonisjs/core/services/encryption'
+
+export default class EncryptionService {
+  static encrypt(data: string): string {
+    return Encryption.encrypt(data)
+  }
+
+  static decrypt(encrypted: string): string | null {
+    try {
+      return Encryption.decrypt(encrypted)
+    } catch {
+      return null
+    }
+  }
+}
+```
+
+### Row Level Security
+```sql
+-- Activer RLS sur la table spots
+ALTER TABLE spots ENABLE ROW LEVEL SECURITY;
+
+-- Politique pour les spots publiés
+CREATE POLICY "Public spots are viewable by everyone" ON spots
+  FOR SELECT USING (status = 'published');
+
+-- Politique pour les créateurs
+CREATE POLICY "Users can update own spots" ON spots
+  FOR UPDATE USING (auth.uid() = user_id);
+```
+
+## 📋 Checklist de Sécurité
+
+### Avant le Déploiement
+- [ ] Variables d'environnement sécurisées
+- [ ] APP_KEY généré et unique
+- [ ] Mode production activé
+- [ ] Debug désactivé
+- [ ] HTTPS configuré
+- [ ] Headers de sécurité configurés
+- [ ] Rate limiting activé
+- [ ] Logs de sécurité configurés
+
+### Maintenance Régulière
+- [ ] Audit des dépendances (hebdomadaire)
+- [ ] Review des logs de sécurité (quotidien)
+- [ ] Mise à jour des dépendances (mensuel)
+- [ ] Test de restauration des backups (trimestriel)
+- [ ] Audit de sécurité complet (annuel)
+
+## 📚 Ressources
+
+- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [AdonisJS Security](https://docs.adonisjs.com/guides/security)
+- [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
+- [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
+description:
+globs:
+alwaysApply: true
+---

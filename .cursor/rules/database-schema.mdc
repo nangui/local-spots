@@ -1,0 +1,259 @@
+# 🗄️ Règles de Base de Données - LocalSpots
+
+## 📊 Schéma Principal
+
+### Tables Principales
+- **Users** : Gestion des utilisateurs et authentification
+- **Spots** : Lieux locaux avec géolocalisation
+- **Categories** : Classification des types de lieux
+- **Reviews** : Avis et évaluations des utilisateurs
+- **Favorites** : Spots favoris des utilisateurs
+
+## 🏗️ Structure des Tables
+
+### Users Table
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(255) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  email_verified_at TIMESTAMP NULL,
+  remember_me_token VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+**Index requis:**
+- `users_email_index` sur `email`
+- `users_username_index` sur `username`
+
+### Spots Table
+```sql
+CREATE TABLE spots (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  latitude DECIMAL(10,8) NOT NULL,
+  longitude DECIMAL(11,8) NOT NULL,
+  address VARCHAR(500) NULL,
+  category VARCHAR(100) NOT NULL,
+  status ENUM('draft', 'published', 'archived', 'moderated') DEFAULT 'draft',
+  opening_hours JSONB NULL,
+  phone VARCHAR(50) NULL,
+  website VARCHAR(255) NULL,
+  price_range INTEGER CHECK (price_range >= 1 AND price_range <= 4),
+  rating DECIMAL(3,2) DEFAULT 0,
+  review_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+**Index requis:**
+- `spots_user_id_index` sur `user_id`
+- `spots_category_index` sur `category`
+- `spots_location_index` sur `(latitude, longitude)`
+- `spots_status_index` sur `status`
+
+### Reviews Table
+```sql
+CREATE TABLE reviews (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  spot_id INTEGER NOT NULL REFERENCES spots(id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, spot_id)
+);
+```
+
+**Index requis:**
+- `reviews_spot_id_index` sur `spot_id`
+- `reviews_user_id_index` sur `user_id`
+- `reviews_rating_index` sur `rating`
+
+## 🔗 Relations et Contraintes
+
+### Contraintes de Référence
+- **CASCADE DELETE** pour maintenir l'intégrité référentielle
+- **UNIQUE** sur les combinaisons critiques (user_id, spot_id)
+- **CHECK** pour valider les valeurs (rating 1-5, price_range 1-4)
+
+### Relations Principales
+```
+Users (1) ←→ (N) Spots
+Spots (1) ←→ (N) Reviews
+Users (1) ←→ (N) Reviews
+Users (1) ←→ (N) Favorites
+Spots (1) ←→ (N) Favorites
+```
+
+## 📈 Optimisations de Performance
+
+### Index Stratégiques
+1. **Index Géospatial** : `(latitude, longitude)` pour les requêtes de proximité
+2. **Index Composés** : `(category, status)` pour le filtrage
+3. **Index de Performance** : `(rating, review_count)` pour le tri
+
+### Requêtes Optimisées
+```sql
+-- Recherche par proximité avec ST_DWithin
+SELECT * FROM spots 
+WHERE ST_DWithin(
+  ST_MakePoint(longitude, latitude)::geography,
+  ST_MakePoint(?, ?)::geography,
+  ? * 1000
+);
+
+-- Pagination efficace
+SELECT * FROM spots 
+WHERE status = 'published'
+ORDER BY created_at DESC
+LIMIT ? OFFSET ?;
+```
+
+## 🔒 Sécurité et Validation
+
+### Protection des Données
+- **Mots de passe** : Hashés avec bcrypt (salt rounds: 10)
+- **Validation** : Contraintes au niveau base + application
+- **SQL Injection** : Protection via Lucid ORM et paramètres liés
+
+### Contrôles d'Accès
+- **Row Level Security** pour la confidentialité des données
+- **Audit Trail** pour les modifications critiques
+- **Soft Delete** pour les données importantes
+
+## 📝 Migrations
+
+### Standards de Nommage
+```bash
+# Format: YYYY_MM_DD_HHMMSS_description.ts
+2024_01_15_143000_create_users_table.ts
+2024_01_15_143100_create_spots_table.ts
+2024_01_15_143200_create_reviews_table.ts
+```
+
+### Structure des Migrations
+```typescript
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = 'table_name'
+
+  async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table.increments('id')
+      // Définition des colonnes
+      table.timestamp('created_at').notNullable()
+      table.timestamp('updated_at').notNullable()
+    })
+  }
+
+  async down() {
+    this.schema.dropTable(this.tableName)
+  }
+}
+```
+
+## 🌱 Seeders
+
+### Données de Test
+- **Users** : Utilisateurs de test avec différents rôles
+- **Categories** : Catégories prédéfinies (restaurant, café, bar, etc.)
+- **Spots** : Exemples de lieux pour le développement
+- **Reviews** : Avis de test pour valider les fonctionnalités
+
+### Structure des Seeders
+```typescript
+export default class extends BaseSeeder {
+  async run() {
+    // Création des données de base
+    await User.createMany([
+      { email: 'admin@test.com', role: 'admin' },
+      { email: 'user@test.com', role: 'user' }
+    ])
+
+    await Category.createMany([
+      { name: 'Restaurant', slug: 'restaurant' },
+      { name: 'Café', slug: 'cafe' }
+    ])
+  }
+}
+```
+
+## 🚀 Commandes Utiles
+
+### Gestion des Migrations
+```bash
+# Exécuter les migrations
+node ace migration:run
+
+# Annuler la dernière migration
+node ace migration:rollback
+
+# Réinitialiser toutes les migrations
+node ace migration:reset
+
+# Voir le statut des migrations
+node ace migration:status
+
+# Créer une nouvelle migration
+node ace make:migration create_table_name
+```
+
+### Gestion des Seeders
+```bash
+# Créer un seeder
+node ace make:seeder UserSeeder
+
+# Exécuter tous les seeders
+node ace db:seed
+
+# Exécuter un seeder spécifique
+node ace db:seed --files="./database/seeders/user_seeder.ts"
+```
+
+## 📊 Monitoring et Maintenance
+
+### Vérifications Régulières
+- **Performance** : Analyser les requêtes lentes
+- **Index** : Vérifier l'utilisation des index
+- **Espace** : Surveiller la croissance des tables
+- **Backup** : Tester la restauration des sauvegardes
+
+### Scripts de Maintenance
+```bash
+# Analyse des performances
+EXPLAIN ANALYZE SELECT * FROM spots WHERE category = 'restaurant';
+
+# Vérification des index
+SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch
+FROM pg_stat_user_indexes;
+
+# Nettoyage des données obsolètes
+DELETE FROM spots WHERE status = 'archived' AND updated_at < NOW() - INTERVAL '1 year';
+```
+
+## 🔮 Évolutions Futures
+
+### Fonctionnalités Avancées
+- **Full-Text Search** : Recherche textuelle avancée
+- **Partitioning** : Partitionnement des tables par date
+- **Replication** : Réplication pour la haute disponibilité
+- **Sharding** : Distribution horizontale des données
+
+### Optimisations
+- **Connection Pooling** : Gestion optimisée des connexions
+- **Query Caching** : Cache des requêtes fréquentes
+- **Materialized Views** : Vues matérialisées pour les rapports
+- **Parallel Queries** : Exécution parallèle des requêtes complexes
+description:
+globs:
+alwaysApply: true
+---

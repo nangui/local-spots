@@ -1,0 +1,68 @@
+---
+description: "Documentation complète de l'API LocalSpots avec tous les endpoints, codes d'erreur et exemples"
+globs: ["app/controllers/**/*.ts", "app/routes/**/*.ts", "start/routes.ts"]
+alwaysApply: false
+---
+
+# 🔗 Règles de Documentation API - LocalSpots
+
+## 📋 Standards à respecter
+
+### Structure des Endpoints
+- Tous les endpoints doivent suivre le pattern RESTful
+- Utiliser les codes de statut HTTP appropriés (200, 201, 400, 401, 404, 422, 500)
+- Inclure la pagination pour les listes avec métadonnées complètes
+
+### Authentification
+- Utiliser Bearer Token pour tous les endpoints protégés
+- Inclure le header `Authorization: Bearer <token>` dans la documentation
+- Gérer les erreurs 401 (Unauthorized) et 403 (Forbidden)
+
+### Validation des Données
+- Valider toutes les entrées avec VineJS
+- Retourner des erreurs 422 avec format standardisé
+- Inclure les règles de validation dans la documentation
+
+### Format des Réponses
+- Utiliser le format JSON standardisé
+- Inclure les métadonnées de pagination
+- Gérer les erreurs avec le format `{ "errors": [...] }`
+
+### Rate Limiting
+- 100 requêtes/minute pour endpoints non authentifiés
+- 1000 requêtes/minute pour endpoints authentifiés
+- Retourner 429 (Too Many Requests) avec `Retry-After`
+
+## 🎯 Endpoints Principaux
+
+### Authentication
+- `POST /auth/register` - Inscription utilisateur
+- `POST /auth/login` - Connexion utilisateur  
+- `POST /auth/logout` - Déconnexion utilisateur
+
+### Spots
+- `GET /spots` - Liste des spots avec pagination et filtres
+- `GET /spots/:id` - Détails d'un spot
+- `POST /spots` - Création d'un nouveau spot
+- `PUT /spots/:id` - Mise à jour d'un spot
+- `DELETE /spots/:id` - Suppression d'un spot
+
+## 📊 Codes d'Erreur Standardisés
+
+| Code | Description | Usage |
+|------|-------------|-------|
+| 400 | Bad Request | Données invalides |
+| 401 | Unauthorized | Token manquant/invalide |
+| 403 | Forbidden | Accès refusé |
+| 404 | Not Found | Ressource non trouvée |
+| 422 | Unprocessable Entity | Erreurs de validation |
+| 429 | Too Many Requests | Rate limit dépassé |
+| 500 | Internal Server Error | Erreur serveur |
+
+## 🔒 Sécurité
+
+- Toutes les dates au format ISO 8601
+- Coordonnées GPS en système WGS84
+- Validation stricte des entrées
+- Protection CSRF activée
+- Headers de sé
