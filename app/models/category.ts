@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
-import Spot from './spot.js'
+import Spot from '#models/spot'
 
 export default class Category extends BaseModel {
   @column({ isPrimary: true })

@@ -1,10 +1,10 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo, hasMany, hasOne } from '@adonisjs/lucid/orm'
 import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
-import User from './user.js'
-import Category from './category.js'
-import Review from './review.js'
-import SpotPhoto from './spot_photo.js'
+import User from '#models/user'
+import Category from '#models/category'
+import Review from '#models/review'
+import SpotPhoto from '#models/spot_photo'
 
 export default class Spot extends BaseModel {
   @column({ isPrimary: true })
