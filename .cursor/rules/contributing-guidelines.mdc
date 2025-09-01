@@ -1,0 +1,394 @@
+# 🤝 Règles de Contribution - LocalSpots
+
+## 📋 Standards de Code
+
+### Style et Formatage
+- **ESLint** et **Prettier** configurés et obligatoires
+- **TypeScript strict mode** activé
+- **Conventional Commits** pour tous les commits
+- **80 caractères max** par ligne (avec exceptions pour URLs)
+
+### Conventions de Nommage
+
+#### Variables et Fonctions
+```typescript
+// ✅ Bon - camelCase
+const userName = 'John'
+function calculateTotal() {}
+const isAuthenticated = true
+
+// ❌ Mauvais
+const user_name = 'John'
+function CalculateTotal() {}
+const IsAuthenticated = true
+```
+
+#### Classes et Types
+```typescript
+// ✅ Bon - PascalCase
+class UserController {}
+interface UserData {}
+type SpotCategory = string
+enum UserRole {}
+
+// ❌ Mauvais
+class userController {}
+interface userData {}
+```
+
+#### Constantes
+```typescript
+// ✅ Bon - UPPER_SNAKE_CASE
+const MAX_RETRIES = 3
+const API_BASE_URL = 'https://api.example.com'
+const DEFAULT_TIMEOUT = 5000
+
+// ❌ Mauvais
+const maxRetries = 3
+const apiBaseUrl = 'https://api.example.com'
+```
+
+### Structure des Fichiers
+```
+app/
+├── controllers/
+│   └── spots_controller.ts    # Controllers en snake_case
+├── models/
+│   └── spot.ts                # Models en singular
+├── validators/
+│   └── create_spot.ts         # Validators descriptifs
+└── services/
+    └── geocoding_service.ts   # Services avec _service suffix
+```
+
+## 🧪 Tests
+
+### Coverage Minimum Requis
+- **Statements** : 80%
+- **Branches** : 75%
+- **Functions** : 80%
+- **Lines** : 80%
+
+### Structure des Tests
+```typescript
+// tests/unit/services/spot_service.spec.ts
+import { test } from '@japa/runner'
+import SpotService from '#services/spot_service'
+
+test.group('SpotService', () => {
+  test('should calculate distance between two points', ({ assert }) => {
+    const distance = SpotService.calculateDistance(
+      48.8566, 2.3522,  // Paris
+      51.5074, -0.1278  // Londres
+    )
+    
+    assert.closeTo(distance, 344, 1)
+  })
+
+  test('should validate coordinates', ({ assert }) => {
+    assert.isTrue(SpotService.isValidLatitude(45.5))
+    assert.isFalse(SpotService.isValidLatitude(91))
+  })
+})
+```
+
+### Tests Fonctionnels
+```typescript
+// tests/functional/spots.spec.ts
+test.group('Spots API', (group) => {
+  group.each.setup(async () => {
+    await Database.beginGlobalTransaction()
+    return () => Database.rollbackGlobalTransaction()
+  })
+
+  test('GET /spots returns paginated list', async ({ client }) => {
+    const response = await client.get('/api/spots?page=1&limit=10')
+    
+    response.assertStatus(200)
+    response.assertBodyContains({
+      meta: {
+        total: expect.any(Number),
+        per_page: 10,
+        current_page: 1
+      }
+    })
+  })
+})
+```
+
+### Factories pour les Tests
+```typescript
+// tests/factories/spot_factory.ts
+export const SpotFactory = Factory
+  .define(Spot, ({ faker }) => ({
+    name: faker.company.name(),
+    description: faker.lorem.paragraph(),
+    latitude: faker.location.latitude(),
+    longitude: faker.location.longitude(),
+    category: faker.helpers.arrayElement(['restaurant', 'cafe', 'bar'])
+  }))
+  .relation('user', () => UserFactory)
+  .build()
+```
+
+## 📝 Documentation
+
+### Commentaires de Code
+```typescript
+/**
+ * Récupère les spots à proximité d'une position
+ * @param latitude - Latitude de la position
+ * @param longitude - Longitude de la position
+ * @param radius - Rayon de recherche en kilomètres
+ * @returns Liste des spots trouvés
+ */
+async function getNearbySpots(
+  latitude: number,
+  longitude: number,
+  radius: number = 10
+): Promise<Spot[]> {
+  // Logique de recherche géospatiale
+}
+```
+
+### Documentation API
+- Tous les endpoints doivent être documentés
+- Inclure exemples de requêtes et réponses
+- Documenter les codes d'erreur possibles
+- Maintenir la documentation à jour
+
+## 🔄 Processus de Développement
+
+### Workflow Git
+```bash
+# 1. Synchroniser avec upstream
+git fetch upstream
+git checkout develop
+git merge upstream/develop
+
+# 2. Créer votre branche
+git checkout -b feature/ma-feature
+
+# 3. Faire vos modifications
+git add .
+git commit -m "feat: description de la feature"
+
+# 4. Pousser vers votre fork
+git push origin feature/ma-feature
+```
+
+### Types de Branches
+- `main` - Branche de production stable
+- `develop` - Branche de développement
+- `feature/*` - Nouvelles fonctionnalités
+- `fix/*` - Corrections de bugs
+- `hotfix/*` - Corrections urgentes en production
+
+### Pull Request Template
+```markdown
+## Description
+Brève description des changements
+
+## Type de changement
+- [ ] Bug fix
+- [ ] Nouvelle feature
+- [ ] Breaking change
+- [ ] Documentation
+
+## Tests
+- [ ] Les tests existants passent
+- [ ] De nouveaux tests ont été ajoutés
+- [ ] Coverage maintenu au-dessus de 80%
+
+## Checklist
+- [ ] Mon code suit les guidelines du projet
+- [ ] J'ai fait une auto-review de mon code
+- [ ] J'ai commenté les parties complexes
+- [ ] J'ai mis à jour la documentation
+- [ ] Le linting passe sans erreurs
+```
+
+## 🚀 Scripts de Développement
+
+### Commandes NPM
+```bash
+# Développement
+npm run dev          # Serveur avec hot reload
+npm run build        # Build pour production
+npm start           # Démarrer en production
+
+# Tests et qualité
+npm test            # Lancer les tests
+npm run lint        # Vérifier le code
+npm run format      # Formater le code
+npm run typecheck   # Vérifier les types
+
+# Base de données
+node ace migration:run      # Exécuter les migrations
+node ace migration:rollback # Annuler les migrations
+node ace db:seed           # Peupler la base de données
+```
+
+### Scripts Personnalisés
+```bash
+# Voir toutes les commandes disponibles
+make help
+
+# Installation complète
+make fresh
+
+# Lancer le développement
+make dev
+
+# Lancer les tests
+make test
+```
+
+## 🔒 Sécurité
+
+### Bonnes Pratiques
+- Ne jamais commiter de secrets dans le code
+- Utiliser les variables d'environnement pour la configuration
+- Valider et sanitizer toutes les entrées utilisateur
+- Utiliser les ORM/Query Builder pour éviter les injections SQL
+
+### Audit de Sécurité
+```bash
+# Vérifier les vulnérabilités
+npm audit
+
+# Corriger automatiquement
+npm audit fix
+
+# Vérifier les dépendances obsolètes
+npm outdated
+```
+
+## 📊 Qualité du Code
+
+### Linting et Formatage
+```bash
+# Vérifier le linting
+npm run lint
+
+# Formater le code
+npm run format
+
+# Vérifier les types TypeScript
+npm run typecheck
+
+# Vérifier tout en une fois
+npm run quality
+```
+
+### Configuration ESLint
+```json
+// .eslintrc.json
+{
+  "extends": [
+    "@adonisjs/eslint-config",
+    "prettier"
+  ],
+  "rules": {
+    "no-console": "warn",
+    "prefer-const": "error",
+    "no-unused-vars": "error"
+  }
+}
+```
+
+## 🚨 Gestion des Erreurs
+
+### Logging
+```typescript
+import logger from '@adonisjs/core/services/logger'
+
+// Logs d'information
+logger.info('User registered', { userId: user.id, email: user.email })
+
+// Logs d'erreur
+logger.error('Failed to create spot', { 
+  error: error.message, 
+  userId: user.id 
+})
+
+// Logs de debug (uniquement en développement)
+logger.debug('Processing request', { 
+  method: request.method(), 
+  url: request.url() 
+})
+```
+
+### Gestion des Exceptions
+```typescript
+// app/exceptions/handler.ts
+export default class ExceptionHandler extends BaseExceptionHandler {
+  async handle(error: any, ctx: HttpContext) {
+    // Log de l'erreur
+    logger.error('Exception occurred', {
+      error: error.message,
+      stack: error.stack,
+      url: ctx.request.url(),
+      method: ctx.request.method()
+    })
+
+    // Retourner une réponse appropriée
+    if (error.status === 404) {
+      return ctx.response.notFound({
+        error: 'Resource not found',
+        message: error.message
+      })
+    }
+
+    return super.handle(error, ctx)
+  }
+}
+```
+
+## 📈 Performance
+
+### Bonnes Pratiques
+- Utiliser la pagination pour les listes
+- Implémenter le caching approprié
+- Optimiser les requêtes de base de données
+- Utiliser l'eager loading pour éviter le problème N+1
+
+### Monitoring
+```typescript
+// Middleware de performance
+export default class PerformanceMiddleware {
+  async handle(ctx: HttpContext, next: NextFn) {
+    const start = Date.now()
+    
+    await next()
+    
+    const duration = Date.now() - start
+    
+    if (duration > 1000) {
+      logger.warn('Slow request detected', {
+        url: ctx.request.url(),
+        method: ctx.request.method(),
+        duration: `${duration}ms`
+      })
+    }
+  }
+}
+```
+
+## 🔮 Évolutions Futures
+
+### Outils de Qualité
+- **SonarQube** pour l'analyse de qualité du code
+- **CodeClimate** pour les métriques de qualité
+- **Dependabot** pour les mises à jour automatiques
+- **Renovate** pour la gestion des dépendances
+
+### Intégration Continue
+- **GitHub Actions** pour l'automatisation
+- **Codecov** pour le reporting de coverage
+- **Stryker** pour les tests de mutation
+- **Bundle Analyzer** pour l'analyse des bundles
+description:
+globs:
+alwaysApply: true
+---

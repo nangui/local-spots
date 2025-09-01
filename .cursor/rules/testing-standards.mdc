@@ -1,0 +1,534 @@
+# 🧪 Standards de Tests - LocalSpots
+
+## 📋 Configuration des Tests
+
+### Dépendances Requises
+```json
+{
+  "devDependencies": {
+    "@japa/runner": "^4.2.0",
+    "@japa/assert": "^4.0.1",
+    "@japa/api-client": "^3.1.0",
+    "@japa/plugin-adonisjs": "^4.0.0",
+    "faker": "^6.6.6"
+  }
+}
+```
+
+### Configuration Japa
+```typescript
+// tests/bootstrap.ts
+import { configure } from '@japa/runner'
+import { assert } from '@japa/assert'
+import { apiClient } from '@japa/api-client'
+import { pluginAdonisJS } from '@japa/plugin-adonisjs'
+
+configure({
+  files: ['tests/**/*.spec.ts'],
+  plugins: [
+    assert(),
+    apiClient(),
+    pluginAdonisJS(app)
+  ],
+  reporters: ['spec'],
+  importer: (filePath) => import(filePath),
+})
+```
+
+## 🎯 Types de Tests
+
+### 1. Tests Unitaires
+**Objectif** : Tester des fonctions, classes ou modules individuels de manière isolée.
+
+```typescript
+// tests/unit/services/spot_service.spec.ts
+import { test } from '@japa/runner'
+import SpotService from '#services/spot_service'
+
+test.group('SpotService', () => {
+  test('calculate distance between two points', ({ assert }) => {
+    const distance = SpotService.calculateDistance(
+      48.8566, 2.3522,  // Paris
+      51.5074, -0.1278  // Londres
+    )
+    
+    assert.closeTo(distance, 344, 1)
+  })
+
+  test('validate coordinates', ({ assert }) => {
+    assert.isTrue(SpotService.isValidLatitude(45.5))
+    assert.isFalse(SpotService.isValidLatitude(91))
+    assert.isTrue(SpotService.isValidLongitude(-120))
+    assert.isFalse(SpotService.isValidLongitude(181))
+  })
+})
+```
+
+### 2. Tests Fonctionnels
+**Objectif** : Tester les endpoints API et les workflows complets.
+
+```typescript
+// tests/functional/spots.spec.ts
+import { test } from '@japa/runner'
+import Database from '@adonisjs/lucid/services/db'
+
+test.group('Spots API', (group) => {
+  group.each.setup(async () => {
+    await Database.beginGlobalTransaction()
+    return () => Database.rollbackGlobalTransaction()
+  })
+
+  test('GET /spots returns paginated list', async ({ client }) => {
+    // Créer des données de test
+    await SpotFactory.createMany(15)
+
+    const response = await client.get('/api/spots?page=1&limit=10')
+
+    response.assertStatus(200)
+    response.assertBodyContains({
+      meta: {
+        total: 15,
+        per_page: 10,
+        current_page: 1
+      }
+    })
+    assert.lengthOf(response.body().data, 10)
+  })
+
+  test('POST /spots requires authentication', async ({ client }) => {
+    const response = await client.post('/api/spots').json({
+      name: 'Test Spot',
+      latitude: 48.8566,
+      longitude: 2.3522
+    })
+
+    response.assertStatus(401)
+    response.assertBodyContains({
+      errors: [{ message: 'Unauthorized' }]
+    })
+  })
+})
+```
+
+### 3. Tests d'Intégration
+**Objectif** : Tester l'interaction entre plusieurs composants.
+
+```typescript
+// tests/integration/spot_creation_workflow.spec.ts
+import { test } from '@japa/runner'
+import Event from '@adonisjs/core/services/event'
+
+test.group('Spot Creation Workflow', () => {
+  test('creating spot triggers notification events', async ({ assert }) => {
+    const eventSpy = sinon.spy()
+    Event.on('spot:created', eventSpy)
+
+    const user = await UserFactory.create()
+    const spot = await SpotService.create(user, {
+      name: 'Test Spot',
+      latitude: 48.8566,
+      longitude: 2.3522,
+      category: 'restaurant'
+    })
+
+    assert.isTrue(eventSpy.calledOnce)
+    assert.equal(eventSpy.firstCall.args[0].id, spot.id)
+  })
+})
+```
+
+## 📁 Structure des Tests
+
+### Organisation des Dossiers
+```
+tests/
+├── unit/                    # Tests unitaires
+│   ├── models/             # Tests des modèles
+│   ├── services/           # Tests des services
+│   └── helpers/            # Tests des utilitaires
+├── functional/              # Tests fonctionnels
+│   ├── auth/               # Tests d'authentification
+│   ├── spots/              # Tests des endpoints spots
+│   └── reviews/            # Tests des avis
+├── integration/             # Tests d'intégration
+│   └── workflows/          # Tests de workflows complets
+├── fixtures/                # Données de test
+└── factories/               # Factories pour les données
+```
+
+### Naming Convention
+```typescript
+// ✅ Bon - Descriptif et clair
+test('returns 404 when spot does not exist')
+test('allows owner to update their spot')
+test('prevents non-owner from deleting spot')
+
+// ❌ Mauvais - Vague ou peu clair
+test('test spot')
+test('works correctly')
+test('handles error')
+```
+
+## 🌱 Factories et Données de Test
+
+### Factories avec Faker
+```typescript
+// tests/factories/spot_factory.ts
+import Factory from '@adonisjs/lucid/factories'
+import Spot from '#models/spot'
+
+export const SpotFactory = Factory
+  .define(Spot, ({ faker }) => ({
+    name: faker.company.name(),
+    description: faker.lorem.paragraph(),
+    latitude: faker.location.latitude(),
+    longitude: faker.location.longitude(),
+    category: faker.helpers.arrayElement(['restaurant', 'cafe', 'bar', 'park']),
+    address: faker.location.streetAddress()
+  }))
+  .relation('user', () => UserFactory)
+  .relation('reviews', () => ReviewFactory)
+  .build()
+```
+
+### Utilisation des Factories
+```typescript
+test('spot with reviews', async ({ assert }) => {
+  const spot = await SpotFactory
+    .with('reviews', 3)
+    .create()
+
+  await spot.load('reviews')
+  assert.lengthOf(spot.reviews, 3)
+})
+
+test('multiple spots with different categories', async ({ assert }) => {
+  const spots = await SpotFactory
+    .createMany([
+      { category: 'restaurant' },
+      { category: 'cafe' },
+      { category: 'bar' }
+    ])
+
+  assert.lengthOf(spots, 3)
+  assert.equal(spots[0].category, 'restaurant')
+})
+```
+
+## 🎭 Mocking et Stubs
+
+### Mocking de Services Externes
+```typescript
+// tests/mocks/geocoding_service_mock.ts
+import sinon from 'sinon'
+import GeocodingService from '#services/geocoding_service'
+
+export function mockGeocodingService() {
+  const stub = sinon.stub(GeocodingService, 'getCoordinates')
+  
+  stub.withArgs('Paris, France').resolves({
+    latitude: 48.8566,
+    longitude: 2.3522
+  })
+  
+  stub.withArgs('Invalid Address').rejects(
+    new Error('Address not found')
+  )
+  
+  return stub
+}
+```
+
+### Utilisation des Mocks
+```typescript
+test('geocode address when creating spot', async ({ client }) => {
+  const geoStub = mockGeocodingService()
+  
+  try {
+    const response = await client
+      .post('/api/spots')
+      .json({
+        name: 'Test Spot',
+        address: 'Paris, France'
+      })
+
+    response.assertBodyContains({
+      latitude: 48.8566,
+      longitude: 2.3522
+    })
+    
+    assert.isTrue(geoStub.calledOnce)
+  } finally {
+    geoStub.restore()
+  }
+})
+```
+
+## 🗄️ Base de Données de Test
+
+### Configuration des Tests
+```typescript
+// .env.test
+DB_CONNECTION=pg
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=password
+DB_DATABASE=local_spots_test
+```
+
+### Transactions pour l'Isolation
+```typescript
+test.group('Spots', (group) => {
+  // Démarrer une transaction avant chaque test
+  group.each.setup(async () => {
+    await Database.beginGlobalTransaction()
+    return () => Database.rollbackGlobalTransaction()
+  })
+
+  test('creates spot', async () => {
+    // Le test s'exécute dans une transaction
+    // qui sera annulée après
+  })
+})
+```
+
+### Seeders de Test
+```typescript
+// tests/seeders/test_seeder.ts
+export default class TestSeeder {
+  async run() {
+    // Créer des données de base pour les tests
+    await User.createMany([
+      { email: 'admin@test.com', role: 'admin' },
+      { email: 'user@test.com', role: 'user' }
+    ])
+
+    await Category.createMany([
+      { name: 'Restaurant', slug: 'restaurant' },
+      { name: 'Café', slug: 'cafe' }
+    ])
+  }
+}
+```
+
+## 📊 Coverage et Reporting
+
+### Configuration de Coverage
+```json
+// package.json
+{
+  "scripts": {
+    "test:coverage": "c8 npm test",
+    "test:coverage:html": "c8 --reporter=html npm test"
+  }
+}
+```
+
+### Configuration c8
+```json
+// .c8rc.json
+{
+  "all": true,
+  "include": ["app/**/*.ts"],
+  "exclude": [
+    "app/**/*.spec.ts",
+    "app/**/types.ts",
+    "app/**/contracts/**"
+  ],
+  "reporter": ["text", "lcov", "html"],
+  "statements": 80,
+  "branches": 75,
+  "functions": 80,
+  "lines": 80
+}
+```
+
+### Générer un Rapport de Coverage
+```bash
+# Générer le rapport
+npm run test:coverage
+
+# Voir le rapport HTML
+npm run test:coverage:html
+open coverage/index.html
+```
+
+## 📝 Bonnes Pratiques
+
+### 1. Structure AAA (Arrange, Act, Assert)
+```typescript
+test('calculate spot rating average', ({ assert }) => {
+  // Arrange
+  const reviews = [
+    { rating: 5 },
+    { rating: 4 },
+    { rating: 3 }
+  ]
+
+  // Act
+  const average = calculateAverage(reviews)
+
+  // Assert
+  assert.equal(average, 4)
+})
+```
+
+### 2. Un Seul Concept par Test
+```typescript
+// ✅ Bon - Tests séparés
+test('validates required fields')
+test('validates email format')
+test('validates password strength')
+
+// ❌ Mauvais - Trop de vérifications
+test('validates all user inputs')
+```
+
+### 3. Tests Indépendants
+```typescript
+// ✅ Bon - Crée ses propres données
+test('updates spot name', async () => {
+  const spot = await SpotFactory.create({ name: 'Old Name' })
+  await spot.merge({ name: 'New Name' }).save()
+  assert.equal(spot.name, 'New Name')
+})
+
+// ❌ Mauvais - Dépend d'un état externe
+test('updates the first spot', async () => {
+  const spot = await Spot.first()  // Dépend de données existantes
+  // ...
+})
+```
+
+### 4. Données de Test Explicites
+```typescript
+// ✅ Bon - Valeurs explicites pour le test
+const user = await UserFactory.create({
+  email: 'test@example.com',
+  isVerified: false
+})
+
+// ❌ Mauvais - Valeurs magiques non expliquées
+const user = await UserFactory.create()
+user.status = 2  // Qu'est-ce que 2 signifie?
+```
+
+## 🚀 Commandes Utiles
+
+### Lancer les Tests
+```bash
+# Tous les tests
+npm test
+
+# Tests avec coverage
+npm run test:coverage
+
+# Tests en mode watch
+npm run test:watch
+
+# Tests d'un groupe spécifique
+node ace test functional
+
+# Tests d'un fichier spécifique
+node ace test tests/functional/spots.spec.ts
+```
+
+### Tests Avancés
+```bash
+# Tests en parallèle
+node ace test --parallel
+
+# Tests avec un reporter spécifique
+node ace test --reporter=dot
+
+# Tests avec filtres
+node ace test --grep="spots"
+
+# Tests avec timeout personnalisé
+node ace test --timeout=10000
+```
+
+## 🐛 Debugging des Tests
+
+### Utiliser console.log
+```typescript
+test('debug test', async ({ client }) => {
+  const response = await client.get('/api/spots')
+  
+  console.log('Response status:', response.status())
+  console.log('Response body:', response.body())
+  
+  response.assertStatus(200)
+})
+```
+
+### Utiliser le Debugger
+```bash
+# Lancer les tests avec inspect
+node --inspect ace test
+
+# Ou avec inspect-brk pour pause au début
+node --inspect-brk ace test
+```
+
+## 🔮 Tests Avancés
+
+### Tests de Performance
+```typescript
+test('spot search performance', async ({ assert }) => {
+  // Créer beaucoup de données de test
+  await SpotFactory.createMany(1000)
+  
+  const start = Date.now()
+  
+  const response = await client.get('/api/spots?search=restaurant')
+  
+  const duration = Date.now() - start
+  
+  // Le test doit s'exécuter en moins de 500ms
+  assert.isBelow(duration, 500)
+  response.assertStatus(200)
+})
+```
+
+### Tests de Concurrence
+```typescript
+test('handles concurrent spot creation', async ({ assert }) => {
+  const user = await UserFactory.create()
+  
+  const promises = Array.from({ length: 10 }, () =>
+    client.post('/api/spots')
+      .loginAs(user)
+      .json({
+        name: `Concurrent Spot ${Math.random()}`,
+        latitude: 48.8566,
+        longitude: 2.3522,
+        category: 'restaurant'
+      })
+  )
+  
+  const responses = await Promise.all(promises)
+  
+  // Tous les spots doivent être créés
+  responses.forEach(response => {
+    response.assertStatus(201)
+  })
+  
+  // Vérifier qu'il y a 10 spots en base
+  const spotsCount = await Spot.query().count('* as total')
+  assert.equal(spotsCount[0].$extras.total, 10)
+})
+```
+
+## 📚 Ressources
+
+- [Japa Documentation](https://japa.dev/docs)
+- [AdonisJS Testing](https://docs.adonisjs.com/guides/testing)
+- [Sinon.js](https://sinonjs.org/)
+- [Faker.js](https://fakerjs.dev/)
+- [Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices)
+description:
+globs:
+alwaysApply: true
+---
