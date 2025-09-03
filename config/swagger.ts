@@ -1,16 +1,14 @@
 // for AdonisJS v6
 import path from "node:path";
-import url from "node:url";
-// ---
 
 export default {
-  // path: __dirname + "/../", for AdonisJS v5
-  path: path.dirname(url.fileURLToPath(import.meta.url)) + "/../", // for AdonisJS v6
-  title: "LocalSpots", // use info instead
-  version: "1.0.0", // use info instead
-  description: "LocalSpots is a location discovery platform that allows users to discover interesting places around them", // use info instead
+  // Use absolute path to the app directory specifically
+  path: path.resolve(process.cwd(), 'app'),
+  title: "LocalSpots",
+  version: "1.0.0",
+  description: "LocalSpots is a location discovery platform that allows users to discover interesting places around them",
   tagIndex: 2,
-  productionEnv: "production", // optional
+  productionEnv: "production",
   info: {
     title: "LocalSpots",
     version: "1.0.0",
@@ -18,16 +16,66 @@ export default {
   },
   snakeCase: true,
 
-  debug: false, // set to true, to get some useful debug output
-  ignore: ["/swagger", "/docs"],
-  preferredPutPatch: "PUT", // if PUT/PATCH are provided for the same route, prefer PUT
+  // Disable debug to reduce console noise
+  debug: false,
+  
+  // Ignore ALL problematic paths and files
+  ignore: [
+    "/swagger", 
+    "/docs", 
+    "/health", 
+    "/api/v1",
+    "/uploads",
+    "/favicon.ico",
+    "/**/*Controller*",
+    "**/*.ts",
+    "**/*.js",
+    "**/controllers/**",
+    "**/models/**",
+    "**/services/**"
+  ],
+  
+  preferredPutPatch: "PUT",
+  
   common: {
-    parameters: {}, // OpenAPI conform parameters that are commonly used
-    headers: {}, // OpenAPI conform headers that are commonly used
+    parameters: {},
+    headers: {},
   },
-  securitySchemes: {}, // optional
-  authMiddlewares: ["auth", "auth:api"], // optional
-  defaultSecurityScheme: "BearerAuth", // optional
-  persistAuthorization: true, // persist authorization between reloads on the swagger page
-  showFullPath: false, // the path displayed after endpoint summary
+  
+  securitySchemes: {
+    BearerAuth: {
+      type: "http",
+      scheme: "bearer",
+      bearerFormat: "JWT"
+    }
+  },
+  
+  authMiddlewares: ["auth", "auth:api"],
+  defaultSecurityScheme: "BearerAuth",
+  persistAuthorization: true,
+  showFullPath: false,
+  
+  // Completely disable ALL auto-loading features
+  autoTag: false,
+  autoGroup: false,
+  autoResponse: false,
+  autoRequest: false,
+  
+  // Disable controller scanning completely
+  scan: false,
+  
+  // Disable file system operations
+  readFiles: false,
+  writeFiles: false,
+  
+  // Custom tags for better organization
+  tags: [
+    { name: "Authentication", description: "User authentication endpoints" },
+    { name: "Users", description: "User management endpoints" },
+    { name: "Spots", description: "Location spots management" },
+    { name: "Reviews", description: "Spot reviews management" },
+    { name: "Categories", description: "Spot categories" },
+    { name: "Photos", description: "Spot photos management" },
+    { name: "Public", description: "Public endpoints (no auth required)" }
+  ]
 };
