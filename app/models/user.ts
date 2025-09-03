@@ -7,6 +7,7 @@ import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Spot from '#models/spot'
 import Review from '#models/review'
+import SpotPhoto from '#models/spot_photo'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
@@ -39,5 +40,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @hasMany(() => Review)
   declare reviews: HasMany<typeof Review>
 
+  @hasMany(() => SpotPhoto)
+  declare spotPhotos: HasMany<typeof SpotPhoto>
+
   static accessTokens = DbAccessTokensProvider.forModel(User)
+
 }
