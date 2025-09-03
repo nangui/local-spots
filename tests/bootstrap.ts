@@ -4,6 +4,8 @@ import app from '@adonisjs/core/services/app'
 import type { Config } from '@japa/runner/types'
 import { pluginAdonisJS } from '@japa/plugin-adonisjs'
 import testUtils from '@adonisjs/core/services/test_utils'
+import { authApiClient } from '@adonisjs/auth/plugins/api_client'
+import mail from '@adonisjs/mail/services/main'
 
 /**
  * This file is imported by the "bin/test.ts" entrypoint file
@@ -13,7 +15,12 @@ import testUtils from '@adonisjs/core/services/test_utils'
  * Configure Japa plugins in the plugins array.
  * Learn more - https://japa.dev/docs/runner-config#plugins-optional
  */
-export const plugins: Config['plugins'] = [assert(), apiClient(), pluginAdonisJS(app)]
+export const plugins: Config['plugins'] = [
+  assert(), 
+  apiClient(), 
+  pluginAdonisJS(app),
+  authApiClient(app)
+]
 
 /**
  * Configure lifecycle function to run before and after all the
@@ -23,8 +30,22 @@ export const plugins: Config['plugins'] = [assert(), apiClient(), pluginAdonisJS
  * The teardown functions are executed after all the tests
  */
 export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
-  setup: [],
-  teardown: [],
+  setup: [
+    // Run migrations before all tests to ensure database schema is up to date
+    () => testUtils.db().migrate(),
+    // Enable mail fake for all tests
+    async () => {
+      await mail.fake()
+    },
+  ],
+  teardown: [
+    // Clean up database after all tests
+    () => testUtils.db().truncate(),
+    // Restore mail after tests
+    async () => {
+      await mail.restore()
+    },
+  ],
 }
 
 /**

@@ -1,6 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
-import type { Authenticators } from '@adonisjs/auth/types'
 
 /**
  * Auth middleware is used authenticate HTTP requests and deny
@@ -14,12 +13,25 @@ export default class AuthMiddleware {
 
   async handle(
     ctx: HttpContext,
-    next: NextFn,
-    options: {
-      guards?: (keyof Authenticators)[]
-    } = {}
+    next: NextFn
   ) {
-    await ctx.auth.authenticateUsing(options.guards, { loginRoute: this.redirectTo })
-    return next()
+    try {
+      await ctx.auth.authenticate()
+      return next()
+    } catch (error) {
+      // For API responses, return JSON error instead of redirect
+      try {
+        return ctx.response.status(401).json({
+          error: 'Unauthorized',
+          message: 'Authentication required'
+        })
+      } catch (responseError) {
+        // Fallback for test environment or when response methods are not available
+        return {
+          error: 'Unauthorized',
+          message: 'Authentication required'
+        }
+      }
+    }
   }
 }

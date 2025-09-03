@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
+import string from '@adonisjs/core/helpers/string'
+import { BaseModel, column, hasMany, beforeSave } from '@adonisjs/lucid/orm'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Spot from '#models/spot'
 
@@ -34,4 +35,11 @@ export default class Category extends BaseModel {
   // Relations
   @hasMany(() => Spot)
   declare spots: HasMany<typeof Spot>
+
+  @beforeSave()
+  static async generateSlug(category: Category) {
+    if (category.name && (!category.slug || category.$dirty.name)) {
+      category.slug = string.slug(category.name)
+    }
+  }
 }
